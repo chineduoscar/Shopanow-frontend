@@ -35,7 +35,7 @@ export default function Sidebar() {
 
       {/* Compact desktop rail — only when collapsed, desktop only, never on mobile */}
       {collapsed && (
-        <div className="hidden md:flex w-14 bg-[#fefafa] dark:bg-[#151B18] flex-col items-center py-4 gap-4 shrink-0 transition-colors">
+        <div className="hidden md:flex w-14 h-dvh bg-[#fefafa] dark:bg-[#151B18] flex-col items-center py-4 gap-4 shrink-0 transition-colors">
           <Image
             src="/logo.png"
             alt="Shopanow"
@@ -60,7 +60,7 @@ export default function Sidebar() {
           ${collapsed ? "md:hidden" : "md:static md:z-auto md:flex"}
           transform transition-transform duration-300 ease-in-out
           ${mobileOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0
-          flex flex-col shrink-0 h-screen
+          flex flex-col shrink-0 h-dvh
           bg-[#fefafa] dark:bg-[#151B18] border-r border-[#E4E0D3] dark:border-transparent
         `}
       >
