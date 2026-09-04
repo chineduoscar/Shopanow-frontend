@@ -12,7 +12,7 @@ export default function ThemeToggle() {
   const { theme, setTheme } = useTheme();
 
   return (
-    <div className="flex items-center gap-0.5 bg-[#12201A]/[0.06] dark:bg-white/5 rounded-lg p-0.5">
+    <div className="flex items-center gap-0.5 bg-[#12201A]/6 dark:bg-white/5 rounded-lg p-0.5">
       {OPTIONS.map(({ value, icon: Icon, label }) => (
         <button
           key={value}
