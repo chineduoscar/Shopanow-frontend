@@ -396,7 +396,7 @@ function SearchBar({ value, onChange, onSubmit, compact }) {
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={(e) => e.key === "Enter" && onSubmit()}
         placeholder="Ask Shopanow what to buy..."
-        className="flex-1 border-none bg-transparent text-[14.5px] text-[#12201A] dark:text-[#F5F4EE] placeholder-[#6B7269] dark:placeholder-[#6B7269] py-2 focus:outline-none"
+        className="flex-1 min-w-0 border-none bg-transparent text-[14.5px] text-[#12201A] dark:text-[#F5F4EE] placeholder-[#6B7269] dark:placeholder-[#6B7269] py-2 focus:outline-none"
       />
       <button
         onClick={onSubmit}
