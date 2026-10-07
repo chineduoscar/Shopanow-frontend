@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import ThemeToggle from "./ThemeToggle";
 import { useSidebar } from "./SidebarContext";
+import ThemedImage from "./ThemedImage";
 
 const RECENT = [
   "Gift ideas for wife",
@@ -66,12 +67,13 @@ export default function Sidebar() {
       >
         {/* Brand + mobile close button */}
         <div className="flex items-center justify-between px-4 pt-5 pb-4">
-          <Image
-            src="/logoname.png"
+          <ThemedImage
+            light="/logoname_light.png"
+            dark="/logoname_dark.png"
             alt="Shopanow"
             width={140}
             height={36}
-            className="object-contain"
+            className="w-35 h-auto object-contain"
             priority
           />
           <button
