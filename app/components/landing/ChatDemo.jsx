@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { ArrowUp, Sparkles } from "lucide-react";
+import { ArrowUp } from "lucide-react";
+import Image from "next/image";
 
 const PLACEHOLDER = "/placeholder-phone.svg";
 
@@ -12,70 +13,75 @@ const SCENARIOS = [
   {
     q: "Phones within 200k",
     reply:
-      "Here are two solid phones under ₦200,000. The first has the bigger battery, the second the better camera.",
+      "Here are two solid phones under ₦200,000. The first gives you more storage, while the second has a 108MP camera.",
     products: [
       {
-        name: "Infinix Note 40",
-        specs: ["8GB RAM", "5000mAh"],
+        name: "Infinix Hot 40 Pro",
+        image:
+          "https://i.pinimg.com/1200x/ba/48/c2/ba48c26c23fe5244c72a807ea92a8da3.jpg",
+        specs: ["8GB + 256GB", "6.78″ 120Hz", "5000mAh"],
         price: "₦185,000",
-        image: "/demo/phone-1.png",
       },
       {
-        name: "Tecno Camon 30",
-        specs: ["8GB RAM", "50MP"],
-        price: "₦198,000",
-        image: "/demo/phone-2.png",
+        name: "Realme C67",
+        image:
+          "https://i.pinimg.com/1200x/f8/76/ef/f876efe73da9c862ad5bbe58eef91376.jpg",
+        specs: ["6GB + 128GB", "108MP camera", "33W charging"],
+        price: "₦170,000",
       },
     ],
   },
   {
     q: "Compare iPhone 15 and Galaxy S24",
     reply:
-      "Both are great. The iPhone 15 holds its resale value and is simpler to use. The Galaxy S24 has a brighter screen and charges faster.",
+      "Both are great flagship phones. The iPhone 15 is a strong choice for the Apple ecosystem, while the Galaxy S24 offers a 120Hz display and telephoto camera.",
     products: [
       {
         name: "iPhone 15",
-        specs: ["128GB", "48MP"],
-        price: "₦1,150,000",
-        image: "/demo/phone-3.png",
+        image:
+          "https://i.pinimg.com/1200x/2c/72/b1/2c72b1c676062281b5b013da3f6f58f0.jpg",
+        specs: ["A16 Bionic", "48MP camera", "128GB"],
+        price: "₦1,050,000",
       },
       {
         name: "Galaxy S24",
-        specs: ["256GB", "50MP"],
-        price: "₦1,050,000",
-        image: "/demo/phone-4.png",
+        image:
+          "https://i.pinimg.com/736x/24/22/32/24223258deb2711a6cfb6ffe2ba3b5e9.jpg",
+        specs: ["120Hz display", "3x telephoto", "128GB"],
+        price: "₦1,000,000",
       },
     ],
   },
   {
     q: "Cheap phone for my mum",
     reply:
-      "For your mum I'd pick phones with a big screen, loud speakers and a battery that lasts days. Both of these are easy to use.",
+      "For your mum, I'd pick phones with a big screen, good battery life and simple everyday performance.",
     products: [
       {
-        name: "Tecno Spark Go",
-        specs: ["4GB RAM", "5000mAh"],
-        price: "₦95,000",
-        image: "/demo/phone-5.png",
+        name: "Galaxy A05s",
+        image:
+          "https://i.pinimg.com/736x/e4/f0/70/e4f070561eb18a0112b248c9f53637d6.jpg",
+        specs: ["6.7″ screen", "5000mAh", "64GB"],
+        price: "₦125,000",
       },
       {
-        name: "Itel A70",
-        specs: ["4GB RAM", '6.6" screen'],
-        price: "₦82,000",
-        image: "/demo/phone-6.png",
+        name: "Redmi 13C",
+        image:
+          "https://i.pinimg.com/1200x/e8/01/d6/e801d62d130cf3ecd74a392a44c92205.jpg",
+        specs: ["6.74″ screen", "5000mAh", "128GB"],
+        price: "₦120,000",
       },
     ],
   },
 ];
-
 const TYPE_MS = 45; // speed of the typing
 const THINK_MS = 1300; // how long the dots show
 const HOLD_MS = 5500; // how long each answer stays before the next question
 
 function DemoCard({ p }) {
   return (
-    <div className="bg-white dark:bg-[#151B18] border border-[#E4E0D3] dark:border-white/10 rounded-2xl overflow-hidden flex flex-col min-w-0">
-      <div className="bg-white h-24 flex items-center justify-center">
+    <div className="bg-white dark:bg-[#151B18] border border-[#E4E0D3] dark:border-white/10 rounded-2xl overflow-hidden flex flex-row sm:flex-col min-w-0">
+      <div className="bg-white w-24 sm:w-full sm:h-24 shrink-0 flex items-center justify-center p-1.5 sm:p-0">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={p.image}
@@ -84,10 +90,10 @@ function DemoCard({ p }) {
             if (!e.currentTarget.src.endsWith(PLACEHOLDER))
               e.currentTarget.src = PLACEHOLDER;
           }}
-          className="h-full w-full object-contain"
+          className="h-20 sm:h-full w-full object-contain"
         />
       </div>
-      <div className="p-3 flex flex-col gap-2">
+      <div className="p-3 flex flex-col gap-2 flex-1 min-w-0 justify-center">
         <div className="text-[13.5px] font-medium leading-tight text-[#12201A] dark:text-[#F5F4EE]">
           {p.name}
         </div>
@@ -95,13 +101,13 @@ function DemoCard({ p }) {
           {p.specs.map((s) => (
             <span
               key={s}
-              className="text-[10.5px] px-2 py-0.5 rounded-full bg-[#22C55E]/12 text-[#0D4633] dark:bg-[#22C55E]/20 dark:text-[#4ADE80]"
+              className="text-[10.5px] sm:text-[9px] px-2 py-0.5 rounded-full bg-[#22C55E]/12 text-[#0D4633] dark:bg-[#22C55E]/20 dark:text-[#4ADE80]"
             >
               {s}
             </span>
           ))}
         </div>
-        <div className="flex items-center justify-between pt-2 border-t border-[#E4E0D3]/60 dark:border-white/10">
+        <div className="flex items-center justify-between gap-2 pt-2 border-t border-[#E4E0D3]/60 dark:border-white/10">
           <span className="text-[13.5px] font-semibold text-[#0D4633] dark:text-[#4ADE80]">
             {p.price}
           </span>
@@ -127,14 +133,20 @@ export default function ChatDemo() {
 
     // people who prefer less motion get the answer straight away
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setTyped("");
-      setPhase("answer");
+      later(() => {
+        setTyped("");
+        setPhase("answer");
+      }, 0);
       later(next, HOLD_MS + 2000);
       return () => timers.forEach(clearTimeout);
     }
 
-    setPhase("typing");
-    setTyped("");
+    // reset for the new scenario (in a callback, not the effect body)
+    later(() => {
+      setPhase("typing");
+      setTyped("");
+    }, 0);
+
     let n = 0;
     const tick = () => {
       n += 1;
@@ -177,7 +189,7 @@ export default function ChatDemo() {
           <span className="w-2.5 h-2.5 rounded-full bg-[#E4E0D3] dark:bg-white/15" />
         </div>
 
-        <div className="h-100 overflow-hidden px-4 pt-5 flex flex-col gap-4">
+        <div className="h-120 sm:h-100 overflow-hidden px-3 sm:px-4 pt-5 flex flex-col gap-4">
           {!showChat ? (
             <div className="flex-1 flex items-center justify-center text-[13px] text-[#6B7269] dark:text-[#A3AAA4]">
               Ask anything about phones
@@ -209,14 +221,20 @@ export default function ChatDemo() {
                   className="flex flex-col gap-3 animate-[fadeUp_.4s_ease_both]"
                 >
                   <div className="flex gap-2.5 items-start">
-                    <span className="w-6.5 h-6.5 shrink-0 rounded-lg bg-[#22C55E]/15 text-[#0D4633] dark:text-[#4ADE80] flex items-center justify-center">
-                      <Sparkles size={14} />
+                    <span className="w-6 h-6 shrink-0">
+                      <Image
+                        src="/logo.png"
+                        alt=""
+                        width={400}
+                        height={400}
+                        className="w-full h-full object-contain"
+                      />
                     </span>
-                    <p className="m-0 text-[13.5px] leading-relaxed text-[#12201A] dark:text-[#F5F4EE]">
+                    <p className="m-0 flex-1 min-w-0 text-[13.5px] leading-relaxed text-[#12201A] dark:text-[#F5F4EE]">
                       {s.reply}
                     </p>
                   </div>
-                  <div className="grid grid-cols-2 gap-2.5 pl-9">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:pl-9">
                     {s.products.map((p) => (
                       <DemoCard key={p.name} p={p} />
                     ))}

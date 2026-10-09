@@ -1,0 +1,13 @@
+Frontend
+
+- Login and Register
+- Hide of landing page if you are logined in (login expires please)
+- Open on a new chat and save it in db so that if one refresh it still remains
+- fix the sidebars like new chat and previous chats
+
+
+Backend
+
+- Check auth flow
+- Do the chat saving in the db
+- Do the get chat section

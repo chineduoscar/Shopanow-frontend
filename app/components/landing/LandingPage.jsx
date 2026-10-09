@@ -36,14 +36,14 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-[#F5F4EE] dark:bg-[#0D110E] text-[#12201A] dark:text-[#F5F4EE] transition-colors">
       {/* top bar */}
-      <header className="max-w-5xl mx-auto flex items-center justify-between px-5 py-4">
-        <Link href="/" aria-label="Shopanow home">
+      <header className="max-w-5xl mx-auto flex items-center justify-between gap-3 px-4 sm:px-5 py-3 sm:py-4">
+        <Link href="/" aria-label="Shopanow home" className="shrink-0">
           <Image
             src="/logoname_light.png"
             alt="Shopanow"
             width={140}
             height={36}
-            className="w-32 h-auto object-contain dark:hidden"
+            className="w-24 sm:w-32 h-auto object-contain dark:hidden"
             priority
           />
           <Image
@@ -51,19 +51,23 @@ export default function LandingPage() {
             alt="Shopanow"
             width={140}
             height={36}
-            className="w-32 h-auto object-contain hidden dark:block"
+            className="w-24 sm:w-32 h-auto object-contain hidden dark:block"
             priority
           />
         </Link>
-        <nav className="flex items-center gap-2 sm:gap-3">
+        <nav className="flex items-center gap-1 sm:gap-3 shrink-0">
           <Link
             href={LOGIN}
-            className="text-[14px] px-3 py-2 hover:text-[#22C55E] transition-colors"
+            className="text-[13px] sm:text-[14px] px-2.5 sm:px-3 py-2 whitespace-nowrap hover:text-[#22C55E] transition-colors"
           >
             Log in
           </Link>
-          <Link href={SIGNUP} className={`${primaryBtn} text-[14px] px-4 py-2`}>
-            Create account
+          <Link
+            href={SIGNUP}
+            className={`${primaryBtn} text-[13px] sm:text-[14px] px-3.5 sm:px-4 py-2 whitespace-nowrap`}
+          >
+            <span className="sm:hidden">Sign up</span>
+            <span className="hidden sm:inline">Create account</span>
           </Link>
         </nav>
       </header>
