@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import Cookies from "js-cookie";
-import { ArrowRight, Eye, EyeOff } from "lucide-react";
+import { ArrowRight, ChevronDown, Eye, EyeOff } from "lucide-react";
 import ThemedImage from "@/app/components/ThemedImage";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
@@ -14,6 +14,17 @@ const inputClass =
   "w-full rounded-lg border border-[#E4E0D3] bg-white px-3.5 py-2 text-[14px] text-[#12201A] placeholder-[#6B7269] transition-colors focus:border-[#22C55E] focus:outline-none focus:ring-2 focus:ring-[#22C55E]/30 dark:border-white/10 dark:bg-[#0D110E] dark:text-[#F5F4EE]";
 
 const labelClass = "mb-1 block text-xs font-medium";
+
+const REFERRAL_OPTIONS = [
+  { value: "friend", label: "A friend" },
+  { value: "facebook", label: "Facebook" },
+  { value: "instagram", label: "Instagram" },
+  { value: "x", label: "X (Twitter)" },
+  { value: "tiktok", label: "TikTok" },
+  { value: "google", label: "Google search" },
+  { value: "ai", label: "AI (ChatGPT, Claude, etc.)" },
+  { value: "other", label: "Other" },
+];
 
 /* Password box with its OWN show/hide button */
 function PasswordField({ id, label, name, value, onChange, placeholder }) {
@@ -57,6 +68,8 @@ export default function Register() {
     email: "",
     password: "",
     confirmPassword: "",
+    referralSource: "",
+    referralOther: "",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -80,10 +93,15 @@ export default function Register() {
     setError("");
 
     try {
-      const { data } = await axios.post(`${API}/auth/register`, {
+      const { data } = await axios.post(`${API}/api/auth/register`, {
         fullName: form.fullName.trim(),
         email: form.email.trim(),
         password: form.password,
+        // "other" sends whatever they typed (if anything); otherwise the chosen option
+        referralSource:
+          form.referralSource === "other"
+            ? form.referralOther.trim() || "other"
+            : form.referralSource || null,
       });
 
       if (data.token) {
@@ -193,6 +211,52 @@ export default function Register() {
                 onChange={handleChange}
                 placeholder="Repeat password"
               />
+            </div>
+
+            {/* Where did you hear about us? (optional) */}
+            <div>
+              <label htmlFor="referralSource" className={labelClass}>
+                Where did you hear about us?{" "}
+                <span className="font-normal text-[#6B7269] dark:text-[#A3AAA4]">
+                  (optional)
+                </span>
+              </label>
+              <div className="relative">
+                <select
+                  id="referralSource"
+                  name="referralSource"
+                  value={form.referralSource}
+                  onChange={handleChange}
+                  className={`${inputClass} cursor-pointer appearance-none pr-10 ${
+                    form.referralSource ? "" : "text-[#6B7269]"
+                  }`}
+                >
+                  <option value="">Select an option</option>
+                  {REFERRAL_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown
+                  size={16}
+                  aria-hidden="true"
+                  className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#6B7269] dark:text-[#A3AAA4]"
+                />
+              </div>
+
+              {form.referralSource === "other" && (
+                <input
+                  id="referralOther"
+                  name="referralOther"
+                  type="text"
+                  value={form.referralOther}
+                  onChange={handleChange}
+                  placeholder="Tell us where"
+                  maxLength={100}
+                  className={`${inputClass} mt-2`}
+                />
+              )}
             </div>
 
             <button

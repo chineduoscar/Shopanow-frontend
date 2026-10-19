@@ -1,9 +1,22 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { useSidebar } from "./SidebarContext";
+
 import Image from "next/image";
 import axios from "axios";
-import { ArrowUp, ShoppingBag, Plus, Menu } from "lucide-react";
+import Cookies from "js-cookie";
+import {
+  ArrowUp,
+  ShoppingBag,
+  Plus,
+  Menu,
+  Copy,
+  Check,
+  RotateCcw,
+  Pencil,
+  Loader2,
+} from "lucide-react";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 const PLACEHOLDER = "/placeholder-phone.svg"; // lives in your Next.js /public folder
@@ -27,6 +40,47 @@ const naira = (n) =>
 // Backend gives paths like "/images/x.jpg" (served by Express) or full URLs.
 const imageSrc = (img) =>
   !img ? PLACEHOLDER : img.startsWith("/") ? `${API}${img}` : img;
+
+// Shared classes for the row of action icons under a message
+const actionsCls =
+  "flex items-center gap-0.5 transition-opacity opacity-100 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100";
+
+/* ---------------------------------------------------------
+   Small action buttons (copy / retry / edit)
+--------------------------------------------------------- */
+function ActionBtn({ label, onClick, disabled, children }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      title={label}
+      className="p-1.5 rounded-md text-[#6B7269] dark:text-[#A3AAA4] hover:bg-black/5 dark:hover:bg-white/10 hover:text-[#12201A] dark:hover:text-[#F5F4EE] disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+    >
+      {children}
+    </button>
+  );
+}
+
+function CopyBtn({ text }) {
+  const [copied, setCopied] = useState(false);
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1500);
+    } catch {
+      /* clipboard blocked (e.g. non-HTTPS) */
+    }
+  };
+
+  return (
+    <ActionBtn label={copied ? "Copied" : "Copy"} onClick={copy}>
+      {copied ? <Check size={14} /> : <Copy size={14} />}
+    </ActionBtn>
+  );
+}
 
 /* ---------------------------------------------------------
    Product card (data comes from the backend)
@@ -161,15 +215,28 @@ function Avatar() {
    Chat page
 --------------------------------------------------------- */
 export default function ChatHome() {
-  const [messages, setMessages] = useState([]); // { role: "user" | "ai", text, products? }
+  const [messages, setMessages] = useState([]); // { id?, role: "user" | "ai", text, products? }
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
   const [bag, setBag] = useState(0);
   const [toast, setToast] = useState("");
   const [viewH, setViewH] = useState(0);
+  const [editingIndex, setEditingIndex] = useState(null);
+  const [editText, setEditText] = useState("");
   const scrollRef = useRef(null);
   const lastTurnRef = useRef(null);
-  const { openMobile } = useSidebar();
+  const skipLoadRef = useRef(false);
+
+  // the URL is the source of truth for the active chat:
+  // /chat -> null (new chat), /chat/<id> -> that conversation
+  const router = useRouter();
+  const params = useParams();
+  const activeId = params?.id?.[0] ?? null;
+  const { openMobile, refreshConversations } = useSidebar();
+
+  // which chat id has finished loading; the spinner shows until it matches the URL
+  const [loadedId, setLoadedId] = useState(null);
+  const loadingChat = Boolean(activeId) && loadedId !== activeId;
 
   const started = messages.length > 0;
 
@@ -183,7 +250,7 @@ export default function ChatHome() {
     const ro = new ResizeObserver(update);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [started]);
+  }, [started, loadingChat]);
 
   // When the user sends a message, put it at the top of the chat area.
   // The AI reply then appears right underneath, with no jump to the bottom.
@@ -197,28 +264,95 @@ export default function ChatHome() {
     }
   }, [messages]);
 
-  const send = async (text) => {
-    const query = (text ?? input).trim();
-    if (!query || thinking) return;
+  // Load a conversation when the URL changes,
+  // or clear the screen on /chat ("New search").
+  useEffect(() => {
+    if (skipLoadRef.current) {
+      skipLoadRef.current = false; // we just created this chat ourselves
+      return;
+    }
 
-    const next = [...messages, { role: "user", text: query }];
-    setMessages(next);
-    setInput("");
+    let cancelled = false;
+
+    const load = async () => {
+      if (!activeId) {
+        setMessages([]);
+        return;
+      }
+      try {
+        const token = Cookies.get("token");
+        const { data } = await axios.get(
+          `${API}/api/conversations/${activeId}`,
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
+        if (cancelled) return;
+        setMessages(
+          data.messages.map((m) => ({
+            id: m.id,
+            role: m.role === "assistant" ? "ai" : "user",
+            text: m.content,
+            products: m.products || [],
+          })),
+        );
+      } catch {
+        if (cancelled) return;
+        setMessages([]);
+      }
+      // done (success or failure): hide the spinner
+      if (!cancelled) setLoadedId(activeId);
+    };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeId]);
+
+  // Runs the request for a given history. send / retry / edit all use this.
+  const run = async (history, { replaceFromId } = {}) => {
+    setMessages(history);
     setThinking(true);
 
     try {
-      const { data } = await axios.post(`${API}/api/chat`, {
-        messages: next.map((m) => ({
-          role: m.role === "ai" ? "assistant" : "user",
-          content: m.text,
-        })),
-      });
+      const token = Cookies.get("token");
+      const last = history[history.length - 1];
+
+      const { data } = await axios.post(
+        `${API}/api/chat`,
+        {
+          message: last.text,
+          conversationId: activeId || undefined,
+          replaceFromId: replaceFromId || undefined,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` }),
+          },
+        },
+      );
+
+      // a brand-new chat: move to /chat/<id> without refetching messages
+      if (!activeId) {
+        skipLoadRef.current = true; // we already have these messages on screen
+        setLoadedId(data.conversationId); // new chat, nothing to load
+        router.replace(`/chat/${data.conversationId}`);
+      }
 
       setMessages((m) => [
-        ...m,
-        { role: "ai", text: data.reply, products: data.products || [] },
+        ...m.slice(0, -1),
+        { ...m[m.length - 1], id: data.userMessageId },
+        {
+          id: data.message.id,
+          role: "ai",
+          text: data.reply,
+          products: data.products || [],
+        },
       ]);
+
+      refreshConversations(); // sidebar picks up the new title / reorder
     } catch (err) {
+      if (err.response?.status === 401) Cookies.remove("token");
       setMessages((m) => [
         ...m,
         {
@@ -232,6 +366,43 @@ export default function ChatHome() {
     } finally {
       setThinking(false);
     }
+  };
+
+  const send = (text) => {
+    const query = (text ?? input).trim();
+    if (!query || thinking) return;
+    setInput("");
+    run([...messages, { role: "user", text: query }]);
+  };
+
+  // Works from either a user message or an AI message index
+  const retry = (index) => {
+    if (thinking) return;
+    const userIdx = messages[index].role === "user" ? index : index - 1;
+    if (userIdx < 0) return;
+    setEditingIndex(null);
+    run(messages.slice(0, userIdx + 1), {
+      replaceFromId: messages[userIdx].id,
+    });
+  };
+
+  const startEdit = (index) => {
+    if (thinking) return;
+    setEditingIndex(index);
+    setEditText(messages[index].text);
+  };
+
+  const cancelEdit = () => setEditingIndex(null);
+
+  const saveEdit = () => {
+    const query = editText.trim();
+    if (!query || thinking) return;
+    const idx = editingIndex;
+    const oldId = messages[idx].id;
+    setEditingIndex(null);
+    run([...messages.slice(0, idx), { role: "user", text: query }], {
+      replaceFromId: oldId,
+    });
   };
 
   const onAdd = (product) => {
@@ -248,18 +419,83 @@ export default function ChatHome() {
 
   const renderMessage = (m, i) =>
     m.role === "user" ? (
-      <div key={i} className="flex justify-end">
-        <div className="bg-[#12201A] dark:bg-[#22C55E] text-[#F5F4EE] dark:text-[#0D110E] rounded-2xl rounded-tr-sm px-4 py-2.5 max-w-[78%] text-[14.5px] leading-relaxed shadow-sm">
-          {m.text}
-        </div>
+      <div key={i} className="group flex flex-col items-end gap-1">
+        {editingIndex === i ? (
+          <div className="w-full max-w-[78%] flex flex-col gap-2">
+            <textarea
+              autoFocus
+              value={editText}
+              onChange={(e) => setEditText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  saveEdit();
+                }
+                if (e.key === "Escape") cancelEdit();
+              }}
+              rows={Math.min(6, Math.max(2, editText.split("\n").length))}
+              className="w-full resize-none rounded-2xl border border-[#E4E0D3] dark:border-white/20 bg-white dark:bg-[#151B18] text-[14.5px] text-[#12201A] dark:text-[#F5F4EE] px-4 py-2.5 leading-relaxed focus:outline-none focus:border-[#12201A] dark:focus:border-white/40"
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={cancelEdit}
+                className="text-xs px-3 py-1.5 rounded-full border border-[#E4E0D3] dark:border-white/10 text-[#12201A] dark:text-[#F5F4EE] hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveEdit}
+                disabled={!editText.trim()}
+                className="text-xs px-3 py-1.5 rounded-full bg-[#22C55E] text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              >
+                Save &amp; send
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="bg-[#12201A] dark:bg-[#22C55E] text-[#F5F4EE] dark:text-[#0D110E] rounded-2xl rounded-tr-sm px-4 py-2.5 max-w-[78%] text-[14.5px] leading-relaxed shadow-sm">
+              {m.text}
+            </div>
+            <div className={actionsCls}>
+              <CopyBtn text={m.text} />
+              <ActionBtn
+                label="Retry"
+                onClick={() => retry(i)}
+                disabled={thinking}
+              >
+                <RotateCcw size={14} />
+              </ActionBtn>
+              <ActionBtn
+                label="Edit"
+                onClick={() => startEdit(i)}
+                disabled={thinking}
+              >
+                <Pencil size={14} />
+              </ActionBtn>
+            </div>
+          </>
+        )}
       </div>
     ) : (
-      <div key={i} className="flex flex-col gap-3">
+      <div key={i} className="group flex flex-col gap-3">
         <div className="flex gap-2.5 items-start">
           <Avatar />
-          <p className="text-[14.5px] leading-relaxed m-0 pt-0.5 text-[#12201A] dark:text-[#F5F4EE]">
-            {m.text}
-          </p>
+          <div className="flex flex-col gap-1">
+            <p className="text-[14.5px] leading-relaxed m-0 pt-0.5 text-[#12201A] dark:text-[#F5F4EE]">
+              {m.text}
+            </p>
+            <div className={`${actionsCls} -ml-1.5`}>
+              <CopyBtn text={m.text} />
+              <ActionBtn
+                label="Retry"
+                onClick={() => retry(i)}
+                disabled={thinking}
+              >
+                <RotateCcw size={14} />
+              </ActionBtn>
+            </div>
+          </div>
         </div>
         {m.products?.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-8">
@@ -301,7 +537,16 @@ export default function ChatHome() {
         </div>
       </header>
 
-      {!started ? (
+      {loadingChat ? (
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2
+            size={20}
+            strokeWidth={1.8}
+            aria-label="Loading chats"
+            className="animate-spin text-[#6B7269] dark:text-[#A3AAA4]"
+          />
+        </div>
+      ) : !started ? (
         <div className="flex-1 flex flex-col items-center justify-center px-5 pt-6 pb-20 gap-7">
           <div className="text-center max-w-155">
             <h1 className="text-4xl sm:text-5xl lg:text-[52px] leading-[1.08] m-0 text-[#12201A] dark:text-[#F5F4EE]">

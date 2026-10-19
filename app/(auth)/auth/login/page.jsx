@@ -31,7 +31,7 @@ export default function Login() {
     setError("");
 
     try {
-      const { data } = await axios.post(`${API}/auth/login`, form);
+      const { data } = await axios.post(`${API}/api/auth/login`, form);
 
       Cookies.set("token", data.token, { expires: 7 });
 

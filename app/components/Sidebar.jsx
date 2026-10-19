@@ -1,27 +1,42 @@
 "use client";
 import { useState } from "react";
 import Image from "next/image";
+import { useParams, useRouter } from "next/navigation";
+import Cookies from "js-cookie";
 import {
   SquarePen,
   Cloud,
   FolderPlus,
   PanelLeftClose,
   PanelLeft,
+  LogOut,
   X,
+  Loader2,
 } from "lucide-react";
 import ThemeToggle from "./ThemeToggle";
 import { useSidebar } from "./SidebarContext";
 import ThemedImage from "./ThemedImage";
 
-const RECENT = [
-  "Gift ideas for wife",
-  "Phones under 200k",
-  "Best laptop deals",
-];
-
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
-  const { mobileOpen, closeMobile } = useSidebar();
+  const router = useRouter();
+  const params = useParams();
+  // the URL decides the active chat: /chat/<id> -> id, /chat -> null
+  const activeId = params?.id?.[0] ?? null;
+  const {
+    mobileOpen,
+    closeMobile,
+    conversations,
+    conversationsLoading,
+    clearAll,
+  } = useSidebar();
+
+  const logout = () => {
+    Cookies.remove("token", { path: "/" });
+    clearAll();
+    closeMobile();
+    router.replace("/auth/login");
+  };
 
   return (
     <>
@@ -65,7 +80,7 @@ export default function Sidebar() {
           bg-[#fefafa] dark:bg-[#151B18] border-r border-[#E4E0D3] dark:border-transparent
         `}
       >
-        {/* Brand + mobile close button */}
+        {/* Brand + close (mobile) / collapse (desktop) */}
         <div className="flex items-center justify-between px-4 pt-5 pb-4">
           <ThemedImage
             light="/logoname_light.png"
@@ -76,6 +91,8 @@ export default function Sidebar() {
             className="w-35 h-auto object-contain"
             priority
           />
+
+          {/* Mobile: close drawer */}
           <button
             onClick={closeMobile}
             className="md:hidden text-[#6B7269] dark:text-[#A3AAA4] hover:text-[#12201A] dark:hover:text-white p-1.5 rounded-md hover:bg-[#12201A]/5 dark:hover:bg-white/5 cursor-pointer transition-colors"
@@ -83,11 +100,23 @@ export default function Sidebar() {
           >
             <X size={18} />
           </button>
+
+          {/* Desktop: collapse sidebar */}
+          <button
+            onClick={() => setCollapsed(true)}
+            className="hidden md:inline-flex text-[#6B7269] dark:text-[#A3AAA4] hover:text-[#12201A] dark:hover:text-white p-1.5 rounded-md hover:bg-[#12201A]/5 dark:hover:bg-white/5 cursor-pointer transition-colors"
+            aria-label="Collapse sidebar"
+          >
+            <PanelLeftClose size={18} />
+          </button>
         </div>
 
         <div className="px-3">
           <button
-            onClick={() => window.location.reload()}
+            onClick={() => {
+              router.push("/chat");
+              closeMobile();
+            }}
             className="w-full flex items-center gap-2 text-[13.5px] font-medium text-[#0D4633] dark:text-white bg-[#22C55E]/10 dark:bg-[#22C55E]/15 border border-[#22C55E]/30 rounded-lg px-3 py-2.5 hover:bg-[#22C55E]/20 dark:hover:bg-[#22C55E]/25 transition-colors cursor-pointer"
           >
             <SquarePen size={16} className="text-[#22C55E]" />
@@ -112,15 +141,38 @@ export default function Sidebar() {
         <div className="px-4 pt-6 pb-2 text-[11px] uppercase tracking-wide text-[#6B7269] dark:text-[#6B7269] font-medium">
           Recent
         </div>
-        <div className="flex-1 overflow-hidden px-2 flex flex-col gap-0.5">
-          {RECENT.map((r) => (
-            <button
-              key={r}
-              className="text-left text-[13px] text-[#6B7269] dark:text-[#A3AAA4] px-2.5 py-2 rounded-md hover:bg-[#12201A]/5 dark:hover:bg-white/5 hover:text-[#12201A] dark:hover:text-white transition-colors truncate cursor-pointer"
-            >
-              {r}
-            </button>
-          ))}
+        <div className="flex-1 overflow-y-auto px-2 flex flex-col gap-0.5">
+          {conversationsLoading ? (
+            <div className="px-2.5 py-2">
+              <Loader2
+                size={14}
+                strokeWidth={1.8}
+                aria-label="Loading chats"
+                className="animate-spin text-[#6B7269] dark:text-[#A3AAA4]"
+              />
+            </div>
+          ) : conversations.length === 0 ? (
+            <p className="px-2.5 py-2 text-[12.5px] text-[#6B7269]">
+              No chats yet
+            </p>
+          ) : (
+            conversations.map((c) => (
+              <button
+                key={c.id}
+                onClick={() => {
+                  router.push(`/chat/${c.id}`);
+                  closeMobile();
+                }}
+                className={`text-left text-[13px] px-2.5 py-2 rounded-md transition-colors truncate cursor-pointer hover:bg-[#12201A]/5 dark:hover:bg-white/5 hover:text-[#12201A] dark:hover:text-white ${
+                  activeId === c.id
+                    ? "bg-[#12201A]/5 dark:bg-white/10 text-[#12201A] dark:text-white"
+                    : "text-[#6B7269] dark:text-[#A3AAA4]"
+                }`}
+              >
+                {c.title ?? "New chat"}
+              </button>
+            ))
+          )}
         </div>
 
         {/* Appearance */}
@@ -140,13 +192,13 @@ export default function Sidebar() {
               Shopper
             </span>
           </div>
-          {/* Collapse toggle — desktop only */}
+
           <button
-            onClick={() => setCollapsed(true)}
-            className="hidden md:inline-flex text-[#6B7269] dark:text-[#A3AAA4] hover:text-[#12201A] dark:hover:text-white p-1.5 rounded-md hover:bg-[#12201A]/5 dark:hover:bg-white/5 cursor-pointer transition-colors"
-            aria-label="Collapse sidebar"
+            onClick={logout}
+            className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-red-500 dark:text-red-400 hover:bg-red-500/10 dark:hover:bg-red-400/10 px-2 py-1.5 rounded-md cursor-pointer transition-colors"
           >
-            <PanelLeftClose size={16} />
+            <LogOut size={15} />
+            Log out
           </button>
         </div>
       </div>
