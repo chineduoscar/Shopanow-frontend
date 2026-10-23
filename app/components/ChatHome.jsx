@@ -2,15 +2,15 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSidebar } from "./SidebarContext";
-
+import Link from "next/link";
 import Image from "next/image";
 import axios from "axios";
 import Cookies from "js-cookie";
+import ChatHeader from "./ChatHeader";
+import { useBag } from "./BagContext";
 import {
   ArrowUp,
-  ShoppingBag,
   Plus,
-  Menu,
   Copy,
   Check,
   RotateCcw,
@@ -95,58 +95,63 @@ function ProductCard({ product, onAdd }) {
   ].filter(Boolean);
 
   return (
-    <div className="bg-white dark:bg-[#151B18] border border-[#E4E0D3] dark:border-white/10 rounded-2xl overflow-hidden flex flex-col min-w-0 shadow-sm transition-colors">
-      <div className="bg-white h-56 sm:h-60 flex items-center justify-center">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={imageSrc(product.image)}
-          alt={product.name}
-          loading="lazy"
-          onError={(e) => {
-            if (!e.currentTarget.src.endsWith(PLACEHOLDER))
-              e.currentTarget.src = PLACEHOLDER;
-          }}
-          className="h-full w-full object-contain"
-        />
-      </div>
+    <div className="group/card bg-white dark:bg-[#151B18] border border-[#E4E0D3] dark:border-white/10 rounded-2xl overflow-hidden flex flex-col min-w-0 shadow-sm hover:shadow-md hover:border-[#22C55E]/50 transition-all">
+      <Link
+        href={`/chat/product/${product.id}`}
+        className="flex flex-col flex-1 min-w-0"
+      >
+        <div className="bg-white h-56 sm:h-60 flex items-center justify-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={imageSrc(product.image)}
+            alt={product.name}
+            loading="lazy"
+            onError={(e) => {
+              if (!e.currentTarget.src.endsWith(PLACEHOLDER))
+                e.currentTarget.src = PLACEHOLDER;
+            }}
+            className="h-full w-full object-contain"
+          />
+        </div>
 
-      <div className="p-4 flex flex-col gap-2 flex-1">
-        <div>
-          <div className="text-[10.5px] tracking-wide text-[#6B7269] dark:text-[#8A9188] uppercase font-medium">
-            {product.brand}
-          </div>
-          <div className="text-[16px] text-[#12201A] dark:text-[#F5F4EE] leading-tight mt-0.5 font-medium">
-            {product.name}
-          </div>
-          {product.reason && (
-            <div className="text-[12.5px] text-[#6B7269] dark:text-[#A3AAA4] mt-1 leading-snug">
-              {product.reason}
+        <div className="p-4 pb-2 flex flex-col gap-2">
+          <div>
+            <div className="text-[10.5px] tracking-wide text-[#6B7269] dark:text-[#8A9188] uppercase font-medium">
+              {product.brand}
             </div>
-          )}
-        </div>
+            <div className="text-[16px] text-[#12201A] dark:text-[#F5F4EE] leading-tight mt-0.5 font-medium">
+              {product.name}
+            </div>
+            {product.reason && (
+              <div className="text-[12.5px] text-[#6B7269] dark:text-[#A3AAA4] mt-1 leading-snug">
+                {product.reason}
+              </div>
+            )}
+          </div>
 
-        <div className="flex flex-wrap gap-1.5">
-          {specs.map((s) => (
-            <span
-              key={s}
-              className="text-[11px] px-2 py-0.5 rounded-full bg-[#22C55E]/12 text-[#0D4633] dark:bg-[#22C55E]/20 dark:text-[#4ADE80]"
-            >
-              {s}
-            </span>
-          ))}
+          <div className="flex flex-wrap gap-1.5">
+            {specs.map((s) => (
+              <span
+                key={s}
+                className="text-[11px] px-2 py-0.5 rounded-full bg-[#22C55E]/12 text-[#0D4633] dark:bg-[#22C55E]/20 dark:text-[#4ADE80]"
+              >
+                {s}
+              </span>
+            ))}
+          </div>
         </div>
+      </Link>
 
-        <div className="flex items-center justify-between mt-auto pt-2 border-t border-[#E4E0D3]/60 dark:border-white/10">
-          <span className="text-[15.5px] text-[#0D4633] dark:text-[#4ADE80] font-semibold">
-            {naira(product.price_ngn)}
-          </span>
-          <button
-            onClick={() => onAdd(product)}
-            className="flex items-center gap-1 bg-[#12201A] dark:bg-[#22C55E] text-[#F5F4EE] dark:text-[#0D110E] rounded-full px-3 py-1.5 text-xs font-medium hover:bg-[#22C55E] dark:hover:bg-[#4ADE80] transition-colors cursor-pointer"
-          >
-            <Plus size={13} /> Add
-          </button>
-        </div>
+      <div className="flex items-center justify-between mt-auto mx-4 mb-4 pt-2 border-t border-[#E4E0D3]/60 dark:border-white/10">
+        <span className="text-[15.5px] text-[#0D4633] dark:text-[#4ADE80] font-semibold">
+          {naira(product.price_ngn)}
+        </span>
+        <button
+          onClick={() => onAdd(product)}
+          className="flex items-center gap-1 bg-[#12201A] dark:bg-[#22C55E] text-[#F5F4EE] dark:text-[#0D110E] rounded-full px-3 py-1.5 text-xs font-medium hover:bg-[#22C55E] dark:hover:bg-[#4ADE80] transition-colors cursor-pointer"
+        >
+          <Plus size={13} /> Add
+        </button>
       </div>
     </div>
   );
@@ -218,8 +223,6 @@ export default function ChatHome() {
   const [messages, setMessages] = useState([]); // { id?, role: "user" | "ai", text, products? }
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
-  const [bag, setBag] = useState(0);
-  const [toast, setToast] = useState("");
   const [viewH, setViewH] = useState(0);
   const [editingIndex, setEditingIndex] = useState(null);
   const [editText, setEditText] = useState("");
@@ -227,12 +230,14 @@ export default function ChatHome() {
   const lastTurnRef = useRef(null);
   const skipLoadRef = useRef(false);
 
+  const { addToBag } = useBag();
+  const { refreshConversations } = useSidebar();
+
   // the URL is the source of truth for the active chat:
   // /chat -> null (new chat), /chat/<id> -> that conversation
   const router = useRouter();
   const params = useParams();
   const activeId = params?.id?.[0] ?? null;
-  const { openMobile, refreshConversations } = useSidebar();
 
   // which chat id has finished loading; the spinner shows until it matches the URL
   const [loadedId, setLoadedId] = useState(null);
@@ -405,12 +410,6 @@ export default function ChatHome() {
     });
   };
 
-  const onAdd = (product) => {
-    setBag((b) => b + 1);
-    setToast(`Added "${product.name}" to your bag`);
-    window.setTimeout(() => setToast(""), 2200);
-  };
-
   // Split the conversation: everything before the latest user message,
   // and the latest turn (user message + AI reply / typing dots).
   const lastUserIndex = messages.map((m) => m.role).lastIndexOf("user");
@@ -500,7 +499,7 @@ export default function ChatHome() {
         {m.products?.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-8">
             {m.products.map((p) => (
-              <ProductCard key={p.id} product={p} onAdd={onAdd} />
+              <ProductCard key={p.id} product={p} onAdd={addToBag} />
             ))}
           </div>
         )}
@@ -509,33 +508,7 @@ export default function ChatHome() {
 
   return (
     <div className="flex-1 flex flex-col bg-[#F5F4EE] dark:bg-[#0D110E] text-[#12201A] dark:text-[#F5F4EE] min-h-screen transition-colors">
-      <header
-        className={`flex items-center justify-between px-6 py-4 shrink-0 ${
-          started
-            ? "border-b border-[#E4E0D3] dark:border-white/10"
-            : "border-b border-transparent"
-        }`}
-      >
-        <button
-          onClick={openMobile}
-          className="md:hidden text-[#12201A] dark:text-[#F5F4EE] p-1 -ml-1"
-          aria-label="Open menu"
-        >
-          <Menu size={20} strokeWidth={1.7} />
-        </button>
-        <div className="relative p-1 ml-auto">
-          <ShoppingBag
-            size={19}
-            strokeWidth={1.7}
-            className="text-[#12201A] dark:text-[#F5F4EE]"
-          />
-          {bag > 0 && (
-            <span className="absolute -top-1 -right-1 bg-[#F5B915] text-[#12201A] text-[10px] rounded-full min-w-3.75 h-3.75 flex items-center justify-center px-1 font-bold">
-              {bag}
-            </span>
-          )}
-        </div>
-      </header>
+      <ChatHeader started={started} />
 
       {loadingChat ? (
         <div className="flex-1 flex items-center justify-center">
@@ -613,12 +586,6 @@ export default function ChatHome() {
               disabled={thinking}
             />
           </div>
-        </div>
-      )}
-
-      {toast && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#12201A] dark:bg-[#22C55E] text-[#F5F4EE] dark:text-[#0D110E] px-4 py-2.5 rounded-full text-[13px] shadow-xl animate-[fadeUp_.2s_ease]">
-          {toast}
         </div>
       )}
     </div>
