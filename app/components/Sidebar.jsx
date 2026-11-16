@@ -1,7 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
+import axios from "@/app/lib/api-client";
 import Cookies from "js-cookie";
 import {
   SquarePen,
@@ -12,13 +13,16 @@ import {
   LogOut,
   X,
   Loader2,
+  PackageCheck,
 } from "lucide-react";
 import ThemeToggle from "./ThemeToggle";
 import { useSidebar } from "./SidebarContext";
 import ThemedImage from "./ThemedImage";
+import { getTokenName } from "../lib/auth";
 
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
+  const [userName, setUserName] = useState("User");
   const router = useRouter();
   const params = useParams();
   // the URL decides the active chat: /chat/<id> -> id, /chat -> null
@@ -28,10 +32,22 @@ export default function Sidebar() {
     closeMobile,
     conversations,
     conversationsLoading,
+    conversationsError,
     clearAll,
   } = useSidebar();
 
-  const logout = () => {
+  useEffect(() => {
+    Promise.resolve().then(() => {
+      setUserName(getTokenName(Cookies.get("token")) || "User");
+    });
+  }, []);
+
+  const logout = async () => {
+    try {
+      await axios.post("/api/auth/logout");
+    } catch (error) {
+      console.error("Failed to end the session:", error);
+    }
     Cookies.remove("token", { path: "/" });
     clearAll();
     closeMobile();
@@ -136,12 +152,33 @@ export default function Sidebar() {
             />{" "}
             Wishlists
           </button>
+          <button
+            onClick={() => {
+              router.push("/orders");
+              closeMobile();
+            }}
+            className="flex items-center gap-2.5 text-[13.5px] text-[#12201A] dark:text-[#D5D9D6] px-2.5 py-2 rounded-md hover:bg-[#12201A]/5 dark:hover:bg-white/5 transition-colors cursor-pointer"
+          >
+            <PackageCheck
+              size={15}
+              className="text-[#6B7269] dark:text-[#A3AAA4]"
+            />
+            My orders
+          </button>
         </nav>
 
         <div className="px-4 pt-6 pb-2 text-[11px] uppercase tracking-wide text-[#6B7269] dark:text-[#6B7269] font-medium">
           Recent
         </div>
-        <div className="flex-1 overflow-y-auto px-2 flex flex-col gap-0.5">
+        <div className="min-h-0 flex-1 overflow-y-scroll px-2 flex flex-col gap-0.5">
+          {conversationsError && (
+            <p
+              role="alert"
+              className="px-2.5 py-2 text-xs text-red-600 dark:text-red-300"
+            >
+              {conversationsError}
+            </p>
+          )}
           {conversationsLoading ? (
             <div className="px-2.5 py-2">
               <Loader2
@@ -151,7 +188,7 @@ export default function Sidebar() {
                 className="animate-spin text-[#6B7269] dark:text-[#A3AAA4]"
               />
             </div>
-          ) : conversations.length === 0 ? (
+          ) : conversations.length === 0 && !conversationsError ? (
             <p className="px-2.5 py-2 text-[12.5px] text-[#6B7269]">
               No chats yet
             </p>
@@ -163,7 +200,7 @@ export default function Sidebar() {
                   router.push(`/chat/${c.id}`);
                   closeMobile();
                 }}
-                className={`text-left text-[13px] px-2.5 py-2 rounded-md transition-colors truncate cursor-pointer hover:bg-[#12201A]/5 dark:hover:bg-white/5 hover:text-[#12201A] dark:hover:text-white ${
+                className={`shrink-0 text-left text-[13px] px-2.5 py-2 rounded-md transition-colors truncate cursor-pointer hover:bg-[#12201A]/5 dark:hover:bg-white/5 hover:text-[#12201A] dark:hover:text-white ${
                   activeId === c.id
                     ? "bg-[#12201A]/5 dark:bg-white/10 text-[#12201A] dark:text-white"
                     : "text-[#6B7269] dark:text-[#A3AAA4]"
@@ -175,30 +212,30 @@ export default function Sidebar() {
           )}
         </div>
 
-        {/* Appearance */}
-        <div className="px-4 pt-2 pb-1 flex items-center justify-between">
-          <span className="text-[11px] uppercase tracking-wide text-[#6B7269] font-medium">
-            Appearance
-          </span>
-          <ThemeToggle />
-        </div>
-
-        <div className="p-3 border-t border-[#E4E0D3] dark:border-white/5 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-full bg-[#F5B915] flex items-center justify-center text-[11px] font-bold text-[#12201A]">
-              S
+        <div className="border-t border-[#E4E0D3] p-3 dark:border-white/5">
+          <div className="mb-3 flex min-w-0 items-center gap-2 px-1">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#F5B915] text-xs font-bold text-[#12201A]">
+              {userName.charAt(0).toUpperCase()}
             </div>
-            <span className="text-[12.5px] text-[#12201A] dark:text-[#D5D9D6]">
-              Shopper
+            <span
+              className="truncate text-xs text-[#6B7269] dark:text-[#A3AAA4]"
+              title={userName}
+            >
+              {userName}
             </span>
           </div>
-
+          <div className="mb-3 flex items-center justify-between px-1">
+            <span className="text-xs text-[#6B7269] dark:text-[#A3AAA4]">
+              Appearance
+            </span>
+            <ThemeToggle />
+          </div>
           <button
             onClick={logout}
-            className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-red-500 dark:text-red-400 hover:bg-red-500/10 dark:hover:bg-red-400/10 px-2 py-1.5 rounded-md cursor-pointer transition-colors"
+            className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-sm text-red-600 transition-colors hover:bg-red-500/10 dark:text-red-300"
           >
-            <LogOut size={15} />
-            Log out
+            <LogOut size={18} />
+            Logout
           </button>
         </div>
       </div>

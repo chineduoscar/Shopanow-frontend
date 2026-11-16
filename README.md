@@ -1,36 +1,20 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Shopanow frontend
 
-## Getting Started
+The Next.js storefront connects to the separate Shopanow Express/PostgreSQL backend. API routes, database access, authentication, and authorization belong to the backend project.
 
-First, run the development server:
+## Configure and run
 
-```bash
+Set `NEXT_PUBLIC_API_URL` in `.env.local` to the backend origin (for example `http://localhost:5000`). This is a public service URL, not a secret.
+
+Run the backend first from the `shopanow-backend` project, then start this frontend:
+
+```powershell
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open <http://localhost:3000>. Configure the backend's `FRONTEND_URL` to allow this frontend origin through CORS.
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+Customers register and log in at `/auth/register` and `/auth/login`. Administrators sign in through the same login and are directed to `/dean/dashboard`. Admin API authorization is enforced by the backend, not by frontend route checks.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+For backend database, Paystack, and administrator-seeding setup, see the README in the separate `shopanow-backend` project.

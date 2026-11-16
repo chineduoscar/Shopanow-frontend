@@ -4,8 +4,8 @@ import { useParams, useRouter } from "next/navigation";
 import { useSidebar } from "./SidebarContext";
 import Link from "next/link";
 import Image from "next/image";
-import axios from "axios";
-import Cookies from "js-cookie";
+import axios, { API_URL } from "@/app/lib/api-client";
+import { getApiErrorMessage } from "@/app/lib/api-error";
 import ChatHeader from "./ChatHeader";
 import { useBag } from "./BagContext";
 import {
@@ -18,8 +18,26 @@ import {
   Loader2,
 } from "lucide-react";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+const API = API_URL;
 const PLACEHOLDER = "/placeholder-phone.svg"; // lives in your Next.js /public folder
+
+const getApiPayload = (data) => data?.data ?? data;
+
+function getChatErrorMessage(error) {
+  const message =
+    error.response?.data?.message ?? error.response?.data?.error;
+  if (typeof message === "string" && message) return message;
+  if (error.response?.status === 429) {
+    return "Too many messages were sent in a short time. Wait a moment and try again.";
+  }
+  if (error.response?.status === 503) {
+    return "Shopanow's AI service is temporarily busy. Please try again in a moment.";
+  }
+  return getApiErrorMessage(
+    error,
+    "Sorry, the server could not process your message. Please try again.",
+  );
+}
 
 const SUGGESTIONS = [
   "Phones within 200k",
@@ -228,7 +246,7 @@ export default function ChatHome() {
   const [editText, setEditText] = useState("");
   const scrollRef = useRef(null);
   const lastTurnRef = useRef(null);
-  const skipLoadRef = useRef(false);
+  const pendingNewConversationRef = useRef(null);
 
   const { addToBag } = useBag();
   const { refreshConversations } = useSidebar();
@@ -241,6 +259,7 @@ export default function ChatHome() {
 
   // which chat id has finished loading; the spinner shows until it matches the URL
   const [loadedId, setLoadedId] = useState(null);
+  const [conversationLoadError, setConversationLoadError] = useState("");
   const loadingChat = Boolean(activeId) && loadedId !== activeId;
 
   const started = messages.length > 0;
@@ -272,8 +291,12 @@ export default function ChatHome() {
   // Load a conversation when the URL changes,
   // or clear the screen on /chat ("New search").
   useEffect(() => {
-    if (skipLoadRef.current) {
-      skipLoadRef.current = false; // we just created this chat ourselves
+    const pending = pendingNewConversationRef.current;
+    if (pending?.id === activeId) {
+      pendingNewConversationRef.current = null;
+      setMessages(pending.messages);
+      setConversationLoadError("");
+      setLoadedId(activeId);
       return;
     }
 
@@ -282,15 +305,19 @@ export default function ChatHome() {
     const load = async () => {
       if (!activeId) {
         setMessages([]);
+        setConversationLoadError("");
         return;
       }
+      setConversationLoadError("");
       try {
-        const token = Cookies.get("token");
-        const { data } = await axios.get(
+        const { data: response } = await axios.get(
           `${API}/api/conversations/${activeId}`,
-          { headers: { Authorization: `Bearer ${token}` } },
         );
         if (cancelled) return;
+        const data = getApiPayload(response);
+        if (!Array.isArray(data?.messages)) {
+          throw new TypeError("Expected the conversation response to contain messages.");
+        }
         setMessages(
           data.messages.map((m) => ({
             id: m.id,
@@ -299,8 +326,14 @@ export default function ChatHome() {
             products: m.products || [],
           })),
         );
-      } catch {
+      } catch (error) {
         if (cancelled) return;
+        const message = getApiErrorMessage(
+          error,
+          "Could not load this conversation. Check your connection and try again.",
+        );
+        console.error("Failed to load conversation:", message);
+        setConversationLoadError(message);
         setMessages([]);
       }
       // done (success or failure): hide the spinner
@@ -319,10 +352,9 @@ export default function ChatHome() {
     setThinking(true);
 
     try {
-      const token = Cookies.get("token");
       const last = history[history.length - 1];
 
-      const { data } = await axios.post(
+      const { data: response } = await axios.post(
         `${API}/api/chat`,
         {
           message: last.text,
@@ -332,39 +364,55 @@ export default function ChatHome() {
         {
           headers: {
             "Content-Type": "application/json",
-            ...(token && { Authorization: `Bearer ${token}` }),
           },
         },
       );
+      const data = getApiPayload(response);
+      if (
+        !data?.conversationId ||
+        !data?.message?.id ||
+        typeof data.reply !== "string"
+      ) {
+        throw new TypeError("Unexpected chat response from the server.");
+      }
 
       // a brand-new chat: move to /chat/<id> without refetching messages
       if (!activeId) {
-        skipLoadRef.current = true; // we already have these messages on screen
-        setLoadedId(data.conversationId); // new chat, nothing to load
+        const newMessages = [
+          ...history.slice(0, -1),
+          { ...last, id: data.userMessageId },
+          {
+            id: data.message.id,
+            role: "ai",
+            text: data.reply,
+            products: data.products || [],
+          },
+        ];
+        pendingNewConversationRef.current = {
+          id: data.conversationId,
+          messages: newMessages,
+        };
         router.replace(`/chat/${data.conversationId}`);
+      } else {
+        setMessages((m) => [
+          ...m.slice(0, -1),
+          { ...m[m.length - 1], id: data.userMessageId },
+          {
+            id: data.message.id,
+            role: "ai",
+            text: data.reply,
+            products: data.products || [],
+          },
+        ]);
       }
-
-      setMessages((m) => [
-        ...m.slice(0, -1),
-        { ...m[m.length - 1], id: data.userMessageId },
-        {
-          id: data.message.id,
-          role: "ai",
-          text: data.reply,
-          products: data.products || [],
-        },
-      ]);
 
       refreshConversations(); // sidebar picks up the new title / reorder
     } catch (err) {
-      if (err.response?.status === 401) Cookies.remove("token");
       setMessages((m) => [
         ...m,
         {
           role: "ai",
-          text:
-            err.response?.data?.error ||
-            "Sorry, I couldn't reach the server. Please try again.",
+          text: getChatErrorMessage(err),
           products: [],
         },
       ]);
@@ -509,6 +557,14 @@ export default function ChatHome() {
   return (
     <div className="flex-1 flex flex-col bg-[#F5F4EE] dark:bg-[#0D110E] text-[#12201A] dark:text-[#F5F4EE] min-h-screen transition-colors">
       <ChatHeader started={started} />
+      {conversationLoadError && (
+        <p
+          role="alert"
+          className="mx-5 mt-3 rounded-lg bg-red-500/10 px-4 py-2.5 text-sm text-red-700 dark:text-red-300"
+        >
+          {conversationLoadError}
+        </p>
+      )}
 
       {loadingChat ? (
         <div className="flex-1 flex items-center justify-center">

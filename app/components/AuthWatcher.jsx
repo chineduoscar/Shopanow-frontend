@@ -9,18 +9,15 @@ export default function AuthWatcher() {
 
   useEffect(() => {
     const token = Cookies.get("token");
-    const exp = token && getTokenExp(token);
-    if (!exp) return;
-
+    const expiresAt = token && getTokenExp(token);
+    if (!expiresAt) return;
     const logout = () => {
-      Cookies.remove("token");
-      router.replace("/");
+      Cookies.remove("token", { path: "/" });
+      router.replace("/auth/login");
     };
-
-    const ms = exp - Date.now();
-    if (ms <= 0) return logout();
-
-    const timer = window.setTimeout(logout, ms);
+    const delay = expiresAt - Date.now();
+    if (delay <= 0) return logout();
+    const timer = window.setTimeout(logout, delay);
     return () => window.clearTimeout(timer);
   }, [router]);
 

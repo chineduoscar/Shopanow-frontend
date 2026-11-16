@@ -6,47 +6,68 @@ import {
   useEffect,
   useState,
 } from "react";
-import axios from "axios";
-import Cookies from "js-cookie";
+import axios, { API_URL } from "@/app/lib/api-client";
+import { getApiErrorMessage } from "@/app/lib/api-error";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+const API = API_URL;
 
 const SidebarContext = createContext(null);
+
+function getConversations(data) {
+  const conversations = [
+    data,
+    data?.conversations,
+    data?.data,
+    data?.data?.conversations,
+  ].find(Array.isArray);
+
+  if (!conversations) {
+    throw new TypeError("Expected the conversations API response to contain an array.");
+  }
+
+  return conversations;
+}
 
 export function SidebarProvider({ children }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [conversations, setConversations] = useState([]);
+  const [conversationsError, setConversationsError] = useState("");
   // true until the first fetch finishes (success or failure)
   const [conversationsLoading, setConversationsLoading] = useState(true);
 
   // manual refresh: called from ChatHome after each send (no spinner, list stays visible)
   const refreshConversations = useCallback(async () => {
-    const token = Cookies.get("token");
-    if (!token) return;
     try {
-      const { data } = await axios.get(`${API}/api/conversations`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setConversations(data);
-    } catch {
-      /* ignore: the sidebar just stays as it was */
+      const { data } = await axios.get(`${API}/api/conversations`);
+      setConversations(getConversations(data));
+      setConversationsError("");
+    } catch (error) {
+      const message = getApiErrorMessage(error, "Could not load conversation history.");
+      setConversationsError(message);
+      console.error("Failed to load conversations:", message);
     }
   }, []);
 
   // initial load when the layout mounts
   useEffect(() => {
     let cancelled = false;
-    const token = Cookies.get("token");
-
     axios
-      .get(`${API}/api/conversations`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      })
+      .get(`${API}/api/conversations`)
       .then(({ data }) => {
-        if (!cancelled) setConversations(data);
+        if (!cancelled) {
+          setConversations(getConversations(data));
+          setConversationsError("");
+        }
       })
-      .catch(() => {
-        /* ignore: the sidebar just stays empty */
+      .catch((error) => {
+        if (!cancelled) {
+          const message = getApiErrorMessage(
+            error,
+            "Could not load conversation history.",
+          );
+          setConversationsError(message);
+          console.error("Failed to load conversations:", message);
+        }
       })
       .finally(() => {
         if (!cancelled) setConversationsLoading(false);
@@ -58,7 +79,10 @@ export function SidebarProvider({ children }) {
   }, []);
 
   // used on logout so the next user doesn't see this user's chats
-  const clearAll = useCallback(() => setConversations([]), []);
+  const clearAll = useCallback(() => {
+    setConversations([]);
+    setConversationsError("");
+  }, []);
 
   return (
     <SidebarContext.Provider
@@ -70,6 +94,7 @@ export function SidebarProvider({ children }) {
 
         conversations,
         conversationsLoading,
+        conversationsError,
         refreshConversations,
         clearAll,
       }}

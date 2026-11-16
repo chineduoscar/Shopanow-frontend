@@ -3,12 +3,11 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import axios from "axios";
+import axios from "@/app/lib/api-client";
+import { getApiErrorMessage } from "@/app/lib/api-error";
 import Cookies from "js-cookie";
 import { ArrowRight, ChevronDown, Eye, EyeOff } from "lucide-react";
 import ThemedImage from "@/app/components/ThemedImage";
-
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
 const inputClass =
   "w-full rounded-lg border border-[#E4E0D3] bg-white px-3.5 py-2 text-[14px] text-[#12201A] placeholder-[#6B7269] transition-colors focus:border-[#22C55E] focus:outline-none focus:ring-2 focus:ring-[#22C55E]/30 dark:border-white/10 dark:bg-[#0D110E] dark:text-[#F5F4EE]";
@@ -93,7 +92,7 @@ export default function Register() {
     setError("");
 
     try {
-      const { data } = await axios.post(`${API}/api/auth/register`, {
+      const { data } = await axios.post("/api/auth/register", {
         fullName: form.fullName.trim(),
         email: form.email.trim(),
         password: form.password,
@@ -104,20 +103,15 @@ export default function Register() {
             : form.referralSource || null,
       });
 
-      if (data.token) {
-        Cookies.set("token", data.token, { expires: 7 });
-        router.push(data.user?.role === "admin" ? "/admin" : "/chat");
-        router.refresh();
-      } else {
-        router.push("/login");
-      }
+      Cookies.set("token", data.token, {
+        expires: 7,
+        sameSite: "Lax",
+        secure: window.location.protocol === "https:",
+      });
+      router.push(data.user?.role === "admin" ? "/dean/dashboard" : "/chat");
+      router.refresh();
     } catch (err) {
-      setError(
-        err.response
-          ? err.response.data?.message ||
-              "Couldn't create your account. Try again."
-          : "Can't reach the server. Check your connection and try again.",
-      );
+      setError(getApiErrorMessage(err, "Couldn't create your account. Try again."));
     } finally {
       setLoading(false);
     }
@@ -272,7 +266,7 @@ export default function Register() {
           <p className="mt-4 text-center text-[13px] text-[#6B7269] dark:text-[#A3AAA4]">
             Already have an account?{" "}
             <Link
-              href="/login"
+              href="/auth/login"
               className="font-semibold text-[#0D4633] hover:underline dark:text-[#4ADE80]"
             >
               Log in

@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { Menu, ShoppingBag } from "lucide-react";
 import { useSidebar } from "./SidebarContext";
 import { useBag } from "./BagContext";
@@ -23,7 +24,11 @@ export default function ChatHeader({ started = false }) {
         <Menu size={20} strokeWidth={1.7} />
       </button>
 
-      <div className="relative p-1 ml-auto">
+      <Link
+        href="/cart"
+        aria-label={`Shopping bag${count ? `, ${count} items` : ""}`}
+        className="relative p-1 ml-auto"
+      >
         <ShoppingBag
           size={19}
           strokeWidth={1.7}
@@ -34,7 +39,7 @@ export default function ChatHeader({ started = false }) {
             {count}
           </span>
         )}
-      </div>
+      </Link>
     </header>
   );
 }
