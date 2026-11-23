@@ -16,7 +16,10 @@ const naira = (value) =>
   }).format(value || 0);
 
 function getErrorMessage(error) {
-  return getApiErrorMessage(error, "Checkout could not be completed. Please try again.");
+  return getApiErrorMessage(
+    error,
+    "Checkout could not be completed. Please try again.",
+  );
 }
 
 export default function CheckoutPage() {
@@ -96,7 +99,8 @@ export default function CheckoutPage() {
           details,
         );
         const order = orderResponse?.data ?? orderResponse;
-        if (!order?.id) throw new TypeError("Unexpected order response from the server.");
+        if (!order?.id)
+          throw new TypeError("Unexpected order response from the server.");
         currentOrderId = order.id;
         setOrderId(currentOrderId);
       }
@@ -110,7 +114,10 @@ export default function CheckoutPage() {
         throw new TypeError("Paystack did not return a checkout URL.");
       }
       const paymentUrl = new URL(payment.authorizationUrl);
-      if (paymentUrl.protocol !== "https:" || paymentUrl.hostname !== "checkout.paystack.com") {
+      if (
+        paymentUrl.protocol !== "https:" ||
+        paymentUrl.hostname !== "checkout.paystack.com"
+      ) {
         throw new TypeError("Paystack returned an invalid checkout URL.");
       }
       setPaymentState("redirecting");
@@ -155,7 +162,10 @@ export default function CheckoutPage() {
           </section>
         ) : paymentState === "verifying" ? (
           <div className="py-24 text-center">
-            <Loader2 className="mx-auto mb-4 animate-spin text-[#22C55E]" size={28} />
+            <Loader2
+              className="mx-auto mb-4 animate-spin text-[#22C55E]"
+              size={28}
+            />
             <h1 className="text-xl font-semibold">Confirming your payment…</h1>
             <p className="mt-2 text-sm text-[#6B7269] dark:text-[#A3AAA4]">
               Please keep this page open while we verify with Paystack.
@@ -165,7 +175,10 @@ export default function CheckoutPage() {
           <>
             <h1 className="mb-6 text-3xl font-semibold">Delivery details</h1>
             {error && (
-              <p role="alert" className="mb-5 rounded-xl bg-red-500/10 p-3 text-sm text-red-600 dark:text-red-300">
+              <p
+                role="alert"
+                className="mb-5 rounded-xl bg-red-500/10 p-3 text-sm text-red-600 dark:text-red-300"
+              >
                 {error}
               </p>
             )}
@@ -255,7 +268,9 @@ export default function CheckoutPage() {
                         name="state"
                         value={details.state}
                         onChange={updateDetails}
-                        disabled={Boolean(orderId) || details.country !== "Nigeria"}
+                        disabled={
+                          Boolean(orderId) || details.country !== "Nigeria"
+                        }
                         className={fieldClass}
                       >
                         <option value="Rivers State">Rivers State</option>
@@ -303,7 +318,10 @@ export default function CheckoutPage() {
                     />
                   </label>
                   <label className="block text-sm font-medium">
-                    Delivery instructions <span className="font-normal text-[#6B7269]">(optional)</span>
+                    Delivery instructions{" "}
+                    <span className="font-normal text-[#6B7269]">
+                      (optional)
+                    </span>
                     <textarea
                       name="deliveryInstructions"
                       placeholder="e.g. Call when you arrive or use the side gate"
@@ -329,14 +347,16 @@ export default function CheckoutPage() {
                     ) : (
                       <ShieldCheck size={17} />
                     )}
-                    {orderId ? "Retry Paystack payment" : "Continue to secure payment"}
+                    {orderId && error ? "Retry payment" : "Continue to secure payment"}
                   </button>
                 </form>
 
                 <aside className="rounded-2xl border border-[#E4E0D3] bg-white p-5 dark:border-white/10 dark:bg-[#151B18]">
                   <h2 className="text-lg font-semibold">Order summary</h2>
                   <div className="mt-4 flex justify-between text-sm text-[#6B7269] dark:text-[#A3AAA4]">
-                    <span>{count} {count === 1 ? "item" : "items"}</span>
+                    <span>
+                      {count} {count === 1 ? "item" : "items"}
+                    </span>
                     <span>{naira(totalPrice)}</span>
                   </div>
                   <div className="mt-4 flex justify-between border-t border-[#E4E0D3] pt-4 font-semibold dark:border-white/10">
@@ -344,7 +364,8 @@ export default function CheckoutPage() {
                     <span>{naira(totalPrice)}</span>
                   </div>
                   <p className="mt-3 text-xs leading-relaxed text-[#6B7269] dark:text-[#A3AAA4]">
-                    The final amount is calculated from current catalogue prices. Payment is securely processed by Paystack.
+                    The final amount is calculated from current catalogue
+                    prices. Payment is securely processed by Paystack.
                   </p>
                 </aside>
               </div>
