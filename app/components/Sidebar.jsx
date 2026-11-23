@@ -18,11 +18,14 @@ import {
 import ThemeToggle from "./ThemeToggle";
 import { useSidebar } from "./SidebarContext";
 import ThemedImage from "./ThemedImage";
+import LogoutConfirmDialog from "./LogoutConfirmDialog";
 import { getTokenName } from "../lib/auth";
 
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [userName, setUserName] = useState("User");
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const router = useRouter();
   const params = useParams();
   // the URL decides the active chat: /chat/<id> -> id, /chat -> null
@@ -42,16 +45,24 @@ export default function Sidebar() {
     });
   }, []);
 
-  const logout = async () => {
-    try {
-      await axios.post("/api/auth/logout");
-    } catch (error) {
-      console.error("Failed to end the session:", error);
+  const logout = () => {
+    setLoggingOut(true);
+    const token = Cookies.get("token");
+    if (token) {
+      axios
+        .post(
+          "/api/auth/logout",
+          {},
+          { headers: { Authorization: `Bearer ${token}` } },
+        )
+        .catch((error) => {
+          console.error("Failed to end the session:", error);
+        });
     }
     Cookies.remove("token", { path: "/" });
     clearAll();
     closeMobile();
-    router.replace("/auth/login");
+    window.setTimeout(() => router.replace("/auth/login"), 250);
   };
 
   return (
@@ -64,6 +75,12 @@ export default function Sidebar() {
           aria-hidden="true"
         />
       )}
+      <LogoutConfirmDialog
+        open={logoutDialogOpen}
+        loggingOut={loggingOut}
+        onCancel={() => setLogoutDialogOpen(false)}
+        onConfirm={logout}
+      />
 
       {/* Compact desktop rail — only when collapsed, desktop only, never on mobile */}
       {collapsed && (
@@ -231,7 +248,7 @@ export default function Sidebar() {
             <ThemeToggle />
           </div>
           <button
-            onClick={logout}
+            onClick={() => setLogoutDialogOpen(true)}
             className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-sm text-red-600 transition-colors hover:bg-red-500/10 dark:text-red-300"
           >
             <LogOut size={18} />

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Cookies from "js-cookie";
 import ThemeToggle from "../ThemeToggle";
+import LogoutConfirmDialog from "../LogoutConfirmDialog";
 import { getTokenName } from "@/app/lib/auth";
 import { getApiErrorMessage } from "@/app/lib/api-error";
 import {
@@ -60,6 +61,8 @@ export default function AdminShell({ children }) {
   const [counts, setCounts] = useState({});
   const [navigationError, setNavigationError] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const [name, setName] = useState("Administrator");
 
   const refreshCounts = useCallback(async () => {
@@ -90,20 +93,32 @@ export default function AdminShell({ children }) {
     return () => window.clearInterval(interval);
   }, [refreshCounts]);
 
-  const logout = async () => {
-    try {
-      await axios.post("/api/auth/logout");
-    } catch (error) {
-      console.error("Could not log out cleanly:", error);
-    } finally {
-      Cookies.remove("token", { path: "/" });
-      router.replace("/auth/login");
-      router.refresh();
+  const logout = () => {
+    setLoggingOut(true);
+    const token = Cookies.get("token");
+    if (token) {
+      axios
+        .post(
+          "/api/auth/logout",
+          {},
+          { headers: { Authorization: `Bearer ${token}` } },
+        )
+        .catch((error) => {
+          console.error("Could not log out cleanly:", error);
+        });
     }
+    Cookies.remove("token", { path: "/" });
+    window.setTimeout(() => router.replace("/auth/login"), 250);
   };
 
   return (
     <div className="min-h-dvh bg-[#F5F4EE] text-[#12201A] dark:bg-[#0D110E] dark:text-[#F5F4EE] lg:flex">
+      <LogoutConfirmDialog
+        open={logoutDialogOpen}
+        loggingOut={loggingOut}
+        onCancel={() => setLogoutDialogOpen(false)}
+        onConfirm={logout}
+      />
       <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col overflow-hidden border-r border-[#E4E0D3] bg-white px-4 py-6 dark:border-white/10 dark:bg-[#151B18] lg:flex">
         <Link href="/dean/dashboard" className="mb-9 px-2 text-xl font-bold tracking-tight">
           Shopanow <span className="text-[#16A34A]">Admin</span>
@@ -126,7 +141,7 @@ export default function AdminShell({ children }) {
             <span className="text-xs text-[#6B7269] dark:text-[#A3AAA4]">Appearance</span>
             <ThemeToggle />
           </div>
-          <button onClick={logout} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-red-600 hover:bg-red-500/10 dark:text-red-300">
+          <button onClick={() => setLogoutDialogOpen(true)} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-red-600 hover:bg-red-500/10 dark:text-red-300">
             <LogOut size={18} /> Logout
           </button>
         </div>
@@ -172,7 +187,7 @@ export default function AdminShell({ children }) {
                 <span className="text-xs text-[#6B7269] dark:text-[#A3AAA4]">Appearance</span>
                 <ThemeToggle />
               </div>
-              <button onClick={logout} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-red-600 hover:bg-red-500/10 dark:text-red-300">
+              <button onClick={() => setLogoutDialogOpen(true)} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-red-600 hover:bg-red-500/10 dark:text-red-300">
                 <LogOut size={18} /> Logout
               </button>
             </nav>
