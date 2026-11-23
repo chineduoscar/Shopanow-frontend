@@ -272,7 +272,7 @@ export default function LandingPage() {
         </section>
 
         {/* closing call to action */}
-        <section className="max-w-5xl mx-auto px-5 pb-20 text-center">
+        <section className="max-w-5xl mx-auto px-5 p-20 text-center">
           <h2 className="text-2xl sm:text-3xl m-0">
             Ready to find your phone?
           </h2>
